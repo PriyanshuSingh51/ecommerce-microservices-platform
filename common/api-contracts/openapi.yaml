@@ -1,0 +1,116 @@
+openapi: 3.0.3
+info:
+  title: E-Commerce Microservices Platform API
+  description: Public API surface exposed through the API Gateway (localhost:8080)
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/products:
+    get:
+      summary: List products
+      tags: [Products]
+      parameters:
+        - in: query
+          name: category
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+    post:
+      summary: Create a product (admin)
+      tags: [Products]
+      responses:
+        "201": { description: Created }
+  /api/products/{id}:
+    get:
+      summary: Get product by id
+      tags: [Products]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+        "404": { description: Not found }
+  /api/orders:
+    get:
+      summary: List orders
+      tags: [Orders]
+      responses:
+        "200": { description: OK }
+    post:
+      summary: Create an order (starts the order saga)
+      tags: [Orders]
+      responses:
+        "202": { description: Accepted, saga in progress }
+  /api/orders/{id}:
+    get:
+      summary: Get order status/details
+      tags: [Orders]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+  /api/orders/{id}/cancel:
+    post:
+      summary: Cancel an order
+      tags: [Orders]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "202": { description: Accepted }
+  /api/payments:
+    post:
+      summary: Process a payment
+      tags: [Payments]
+      responses:
+        "200": { description: OK }
+  /api/payments/{id}/refund:
+    post:
+      summary: Refund a payment
+      tags: [Payments]
+      responses:
+        "200": { description: OK }
+  /api/auth/register:
+    post:
+      summary: Register a new user
+      tags: [Auth]
+      responses:
+        "201": { description: Created }
+  /api/auth/login:
+    post:
+      summary: Authenticate and receive a JWT
+      tags: [Auth]
+      responses:
+        "200": { description: OK }
+        "401": { description: Invalid credentials }
+  /api/inventory/{productId}:
+    get:
+      summary: Get inventory for a product
+      tags: [Inventory]
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+  /api/notifications:
+    get:
+      summary: List notifications
+      tags: [Notifications]
+      responses:
+        "200": { description: OK }
+
+# Note: each service also exposes its own full OpenAPI doc via SpringDoc at
+# /v3/api-docs and /swagger-ui.html — this file is the gateway-level summary.

@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OrderCreated",
+  "type": "object",
+  "properties": {
+    "eventId": { "type": "string" },
+    "eventType": { "type": "string", "const": "OrderCreated" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "aggregateId": { "type": "string" },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "customerId": { "type": "string" },
+        "totalAmount": { "type": "number", "minimum": 0 },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "quantity": { "type": "integer", "minimum": 1 },
+              "price": { "type": "number", "minimum": 0 }
+            },
+            "required": ["productId", "quantity", "price"]
+          }
+        }
+      },
+      "required": ["orderId", "customerId", "totalAmount", "items"]
+    }
+  },
+  "required": ["eventId", "eventType", "timestamp", "aggregateId", "payload"]
+}

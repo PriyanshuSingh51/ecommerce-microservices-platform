@@ -1,0 +1,64 @@
+namespace: ecommerce
+
+image:
+  registry: ecommerce
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+services:
+  apiGateway:
+    name: api-gateway
+    port: 8080
+    replicas: 2
+    resources:
+      requests: { memory: "512Mi", cpu: "250m" }
+      limits:   { memory: "1Gi",   cpu: "500m" }
+  productService:
+    name: product-service
+    port: 8081
+    replicas: 3
+    resources:
+      requests: { memory: "512Mi", cpu: "250m" }
+      limits:   { memory: "1Gi",   cpu: "500m" }
+  orderService:
+    name: order-service
+    port: 8084
+    replicas: 2
+    resources:
+      requests: { memory: "512Mi", cpu: "250m" }
+      limits:   { memory: "1.5Gi", cpu: "1000m" }
+  paymentService:
+    name: payment-service
+    port: 8086
+    replicas: 2
+    resources:
+      requests: { memory: "512Mi", cpu: "250m" }
+      limits:   { memory: "1Gi",   cpu: "500m" }
+  userService:
+    name: user-service
+    port: 8088
+    replicas: 2
+    resources:
+      requests: { memory: "256Mi", cpu: "150m" }
+      limits:   { memory: "512Mi", cpu: "300m" }
+  inventoryService:
+    name: inventory-service
+    port: 8090
+    replicas: 2
+    resources:
+      requests: { memory: "256Mi", cpu: "150m" }
+      limits:   { memory: "512Mi", cpu: "300m" }
+  notificationService:
+    name: notification-service
+    port: 8092
+    replicas: 1
+    resources:
+      requests: { memory: "256Mi", cpu: "100m" }
+      limits:   { memory: "512Mi", cpu: "300m" }
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80

@@ -1,0 +1,82 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: inventory-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/inventorydb
+    username: ${DB_USER:inventoryuser}
+    password: ${DB_PASSWORD:inventorypass}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: inventory-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.ecommerce.*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER:http://localhost:8761/eureka}
+  instance:
+    prefer-ip-address: true
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      default:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5s
+  retry:
+    instances:
+      default:
+        maxAttempts: 3
+        waitDuration: 500ms
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_BASE_URL:http://localhost:9411}/api/v2/spans
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"

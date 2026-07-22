@@ -1,0 +1,11 @@
+{
+  "title": "Microservices Health Dashboard",
+  "panels": [
+    { "title": "Service Availability", "type": "stat", "targets": [{ "expr": "up" }] },
+    { "title": "Error Rate (5xx)", "type": "graph", "targets": [{ "expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])) by (service)" }] },
+    { "title": "p95 Latency", "type": "graph", "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, service))" }] },
+    { "title": "Requests/sec", "type": "graph", "targets": [{ "expr": "sum(rate(http_server_requests_seconds_count[1m])) by (service)" }] }
+  ],
+  "schemaVersion": 39,
+  "version": 1
+}

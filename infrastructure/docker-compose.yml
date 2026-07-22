@@ -1,0 +1,251 @@
+version: '3.8'
+
+services:
+  # ───────────────────────── Databases (database-per-service) ─────────────────────────
+  postgres-product:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: productuser
+      POSTGRES_PASSWORD: productpass
+    ports: ["5432:5432"]
+    volumes: [postgres-product-data:/var/lib/postgresql/data]
+    networks: [ecommerce-network]
+
+  postgres-order:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: orderdb
+      POSTGRES_USER: orderuser
+      POSTGRES_PASSWORD: orderpass
+    ports: ["5433:5432"]
+    volumes: [postgres-order-data:/var/lib/postgresql/data]
+    networks: [ecommerce-network]
+
+  postgres-payment:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: paymentdb
+      POSTGRES_USER: paymentuser
+      POSTGRES_PASSWORD: paymentpass
+    ports: ["5434:5432"]
+    volumes: [postgres-payment-data:/var/lib/postgresql/data]
+    networks: [ecommerce-network]
+
+  postgres-user:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: usersvcuser
+      POSTGRES_PASSWORD: usersvcpass
+    ports: ["5435:5432"]
+    volumes: [postgres-user-data:/var/lib/postgresql/data]
+    networks: [ecommerce-network]
+
+  postgres-inventory:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: inventorydb
+      POSTGRES_USER: inventoryuser
+      POSTGRES_PASSWORD: inventorypass
+    ports: ["5436:5432"]
+    volumes: [postgres-inventory-data:/var/lib/postgresql/data]
+    networks: [ecommerce-network]
+
+  postgres-notification:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: notificationdb
+      POSTGRES_USER: notificationuser
+      POSTGRES_PASSWORD: notificationpass
+    ports: ["5437:5432"]
+    volumes: [postgres-notification-data:/var/lib/postgresql/data]
+    networks: [ecommerce-network]
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    networks: [ecommerce-network]
+
+  # ───────────────────────── Message Broker ─────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports: ["2181:2181"]
+    networks: [ecommerce-network]
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    depends_on: [zookeeper]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports: ["9092:9092"]
+    volumes: [kafka-data:/var/lib/kafka/data]
+    networks: [ecommerce-network]
+
+  # ───────────────────────── Platform / Edge Services ─────────────────────────
+  config-server:
+    build: { context: ../config-server }
+    ports: ["8888:8888"]
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    networks: [ecommerce-network]
+
+  eureka-server:
+    build: { context: ../service-discovery }
+    ports: ["8761:8761"]
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on: [config-server]
+    networks: [ecommerce-network]
+
+  api-gateway:
+    build: { context: ../api-gateway }
+    ports: ["8080:8080"]
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_SERVER: http://eureka-server:8761/eureka
+    depends_on: [eureka-server, redis]
+    networks: [ecommerce-network]
+
+  # ───────────────────────── Business Microservices ─────────────────────────
+  product-service:
+    build: { context: ../product-service }
+    ports: ["8081:8081"]
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_SERVER: http://eureka-server:8761/eureka
+      DB_HOST: postgres-product
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on: [postgres-product, eureka-server, kafka]
+    networks: [ecommerce-network]
+
+  order-service:
+    build: { context: ../order-service }
+    ports: ["8084:8084"]
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_SERVER: http://eureka-server:8761/eureka
+      DB_HOST: postgres-order
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on: [postgres-order, eureka-server, kafka]
+    networks: [ecommerce-network]
+
+  payment-service:
+    build: { context: ../payment-service }
+    ports: ["8086:8086"]
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_SERVER: http://eureka-server:8761/eureka
+      DB_HOST: postgres-payment
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on: [postgres-payment, eureka-server, kafka]
+    networks: [ecommerce-network]
+
+  user-service:
+    build: { context: ../user-service }
+    ports: ["8088:8088"]
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_SERVER: http://eureka-server:8761/eureka
+      DB_HOST: postgres-user
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on: [postgres-user, eureka-server, kafka]
+    networks: [ecommerce-network]
+
+  inventory-service:
+    build: { context: ../inventory-service }
+    ports: ["8090:8090"]
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_SERVER: http://eureka-server:8761/eureka
+      DB_HOST: postgres-inventory
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on: [postgres-inventory, eureka-server, kafka]
+    networks: [ecommerce-network]
+
+  notification-service:
+    build: { context: ../notification-service }
+    ports: ["8092:8092"]
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_SERVER: http://eureka-server:8761/eureka
+      DB_HOST: postgres-notification
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on: [postgres-notification, eureka-server, kafka]
+    networks: [ecommerce-network]
+
+  # ───────────────────────── Observability Stack ─────────────────────────
+  zipkin:
+    image: openzipkin/zipkin:latest
+    ports: ["9411:9411"]
+    networks: [ecommerce-network]
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports: ["9090:9090"]
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks: [ecommerce-network]
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana-dashboards:/etc/grafana/provisioning/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports: ["3000:3000"]
+    networks: [ecommerce-network]
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports: ["9200:9200"]
+    volumes: [es-data:/usr/share/elasticsearch/data]
+    networks: [ecommerce-network]
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports: ["5601:5601"]
+    depends_on: [elasticsearch]
+    networks: [ecommerce-network]
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    depends_on: [elasticsearch]
+    networks: [ecommerce-network]
+
+networks:
+  ecommerce-network:
+    driver: bridge
+
+volumes:
+  postgres-product-data:
+  postgres-order-data:
+  postgres-payment-data:
+  postgres-user-data:
+  postgres-inventory-data:
+  postgres-notification-data:
+  kafka-data:
+  prometheus-data:
+  grafana-data:
+  es-data:

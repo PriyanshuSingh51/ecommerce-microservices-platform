@@ -1,0 +1,48 @@
+{{- range $key, $svc := .Values.services }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svc.name }}
+  namespace: {{ $.Values.namespace }}
+  labels:
+    app: {{ $svc.name }}
+spec:
+  replicas: {{ $svc.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $svc.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $svc.name }}
+    spec:
+      containers:
+        - name: {{ $svc.name }}
+          image: "{{ $.Values.image.registry }}/{{ $svc.name }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ $svc.port }}
+          envFrom:
+            - configMapRef:
+                name: platform-config
+          resources:
+            requests:
+              memory: {{ $svc.resources.requests.memory }}
+              cpu: {{ $svc.resources.requests.cpu }}
+            limits:
+              memory: {{ $svc.resources.limits.memory }}
+              cpu: {{ $svc.resources.limits.cpu }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: {{ $svc.port }}
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: {{ $svc.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+{{- end }}
